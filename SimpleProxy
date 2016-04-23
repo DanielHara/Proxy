@@ -4,10 +4,17 @@
 import java.io.*;
 import java.net.*;
 
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import java.awt.event.*;
+
 //Esta classe implementa um aplicativo Proxy entre um navegador e a Web.
 //Este programa funciona melhor com páginas Web HTML de Texto Puro.
 
-public class SimpleProxy  {
+public class SimpleProxy  extends JFrame implements ActionListener{
 
 	//Declaração de variáveis
 	
@@ -21,6 +28,26 @@ public class SimpleProxy  {
 	Socket server;
 	
 	ServerSocket ss;
+	
+	byte[] request;
+	byte[] reply;
+	
+	int localport;
+	int remoteport;
+	
+	int bytesRead;
+	int bytesRead2;
+	
+	String message;
+	String host;
+	
+	static JPanel Painel;
+	
+	JLabel Rotulo;
+	JTextField TextField;
+	JButton Botao;
+	
+	boolean Rodar;   //Esta variável indica se a execução do proxy.
 	
 	//Os próximos dois métodos foram desenvolvidos para retirar a informação Host
 	//da String message, que é a requisição do cliente convertida de Bytes para String.
@@ -81,14 +108,27 @@ public class SimpleProxy  {
 		
 	}
 	
-	public SimpleProxy (int localport, int remoteport) throws IOException
+	public SimpleProxy () throws IOException
 	{
-		byte[] request = new byte[1024];     //Declaração de variáveis.
-		byte[] reply = new byte[4096];
+		super();
 		
-		String message = null;				//Inicialização de variáveis.
-		String path = null;
-		String host = null;
+		Painel = new JPanel();
+		
+		Rotulo = new JLabel("Digite a porta local:");
+		
+		Rotulo.setLabelFor(TextField);
+		
+		Botao = new JButton ("Fechar!");
+		
+		Painel.add(Rotulo);
+		Painel.add(TextField);
+		
+		
+		request = new byte[1024];     //Declaração de variáveis.
+		reply = new byte[4096];
+		
+		message = null;				//Inicialização de variáveis.
+		host = null;
 		
 		streamFromClient = null;
 		streamToClient = null;
@@ -96,127 +136,178 @@ public class SimpleProxy  {
 		streamFromServer = null;
 	    streamToServer = null;
 		
-		int bytesRead = 0;
-		int bytesRead2 = 0;
+		bytesRead = 0;
+		bytesRead2 = 0;
+		
+		remoteport = 80;
 		
 		ss = new ServerSocket(localport);
 		System.out.println("TENTANDO!");
 		
+		Rodar = true;
+		
 		client = null;
 		server = null;
-		
-		while(true)
-		{
-			if (client == null)
-			{
-				try
-				{	//Esperar por algum cliente se conectar e criar um Socket para se conectar com um cliente.
-					client = ss.accept();
-					streamFromClient = client.getInputStream();
-					streamToClient = client.getOutputStream();
-					client.setSoTimeout(1000);   //Não permitir que as Streams bloqueiem indefinidamente, caso não recebam dados.
-					
-					System.out.println("Se conectando com o cliente!");
-				} catch (IOException e)
-				{
-					System.out.println("ERRO: !" + e);
-				}
-			
-					//Ler do Cliente
-				try
-				{
-					bytesRead = streamFromClient.read(request);
-				
-					message = new String(request, "US-ASCII");
-					System.out.println("Message = " + message);   //Exibir requisição na tela, para auxiliar o acompanhamento do programa.
-					
-					host = getHost (message);					//Obter o Host a ser usado para se conectar ao Servidor.
-					System.out.println("\nHost = " + host + "<= " );
-				
-				} catch (IOException e)
-				{
-					System.out.println("ERRO: " + e);
-				}
-			
-				if (client != null)
-				{
-					if (server == null)   //Conectar com o Server
-					{
-						System.out.println("Entrei no if do Server!");
-						try 
-						{ 
-							server = new Socket (host, remoteport);    //Criar o Socket e as Streams
-							streamToServer = server.getOutputStream();
-							streamFromServer = server.getInputStream();
-						
-							server.setSoTimeout(1000);		   //Não permitir que as Streams bloqueiem indefinidamente, caso não recebam dados.			
-						
-						} catch (IOException e) 
-						{
-							System.out.println("CONEXAO RECUSADA!");    //Caso não consiga conectar
-						}
-					}
-					try
-					{
-						streamToServer.write(request, 0, bytesRead);
-						streamToServer.flush();
-					} catch (IOException e) {   }
-					
-				//Dar um Read no Server
-					try
-					{
-						while ( (bytesRead2 = streamFromServer.read(reply)) != -1)
-						{
-							streamToClient.write(reply, 0, bytesRead2);
-							streamToClient.flush();
-					
-							System.out.println("Vou receber do Server!");
-					
-							String resposta = new String (reply, "US-ASCII");
-							System.out.println("O Reply eh este: " + resposta);
-						}
-					
-					
-					} catch (IOException e) {  }
-				}  // if (client != null)
-			} //if(client == null)
-			
-			if (streamToServer != null)
-			{
-				try
-				{
-					streamToServer.close();
-				} catch (IOException e) {System.err.println(e);  }
-			}
-			
-			
-			if (streamToClient != null)
-				try { streamToClient.close(); }
-	    		catch (IOException e) {  System.err.println(e); }
-			
-			try {
-				if (server != null)
-				{
-					server.close();
-					server = null;
-				}
-				if (client != null)
-				{
-					client.close();
-					client = null;
-				}
-			} catch (IOException e) { System.err.println(e);   }   
-			
-			
-			
-		}    //Acabou while
-		
+	} //Fim do construtor
 	
-	} 
+	public void actionPerformed (ActionEvent evt)
+{
+		Object source = evt.getSource();
+		if (source == TextField)
+		{
+			localport = Integer.parseInt(TextField.getText());
+			Rodar = true;
+			while(Rodar)
+			{
+				if (client == null)
+				{
+					try
+					{	//Esperar por algum cliente se conectar e criar um Socket para se conectar com um cliente.
+						client = ss.accept();
+						streamFromClient = client.getInputStream();
+						streamToClient = client.getOutputStream();
+						client.setSoTimeout(1000);   //Não permitir que as Streams bloqueiem indefinidamente, caso não recebam dados.
+					
+						System.out.println("Se conectando com o cliente!");
+					} catch (IOException e)
+					{
+						System.out.println("ERRO: !" + e);
+					}
+			
+						//Ler do Cliente
+					try
+					{
+						bytesRead = streamFromClient.read(request);
+				
+						message = new String(request, "US-ASCII");
+						System.out.println("Message = " + message);   //Exibir requisição na tela, para auxiliar o acompanhamento do programa.
+					
+						host = getHost (message);					//Obter o Host a ser usado para se conectar ao Servidor.
+						System.out.println("\nHost = " + host + "<= " );
+				
+					} catch (IOException e)
+					{
+						System.out.println("ERRO: " + e);
+					}
+			
+					if (client != null)
+					{
+						if (server == null)   //Conectar com o Server
+						{
+							System.out.println("Entrei no if do Server!");
+							try 
+							{ 
+								server = new Socket (host, remoteport);    //Criar o Socket e as Streams
+								streamToServer = server.getOutputStream();
+								streamFromServer = server.getInputStream();
+						
+								server.setSoTimeout(1000);		   //Não permitir que as Streams bloqueiem indefinidamente, caso não recebam dados.			
+						
+							} catch (IOException e) 
+							{
+								System.out.println("CONEXAO RECUSADA!");    //Caso não consiga conectar
+							}
+						}
+						try
+						{
+							streamToServer.write(request, 0, bytesRead);
+							streamToServer.flush();
+						} catch (IOException e) {   }
+					
+						//Dar um Read no Server
+						try
+						{
+							while ( (bytesRead2 = streamFromServer.read(reply)) != -1)
+							{
+								streamToClient.write(reply, 0, bytesRead2);
+								streamToClient.flush();
+					
+								System.out.println("Vou receber do Server!");
+					
+								String resposta = new String (reply, "US-ASCII");
+								System.out.println("O Reply eh este: " + resposta);
+							}
+					
+					
+						} catch (IOException e) {  }
+					}  // if (client != null)
+				} //if(client == null)
+			
+				if (streamToServer != null)
+				{
+					try
+					{
+						streamToServer.close();
+						streamToServer = null;
+					} catch (IOException e) {System.err.println(e);  }
+				}
+			
+			
+				if (streamToClient != null)
+				{
+					try
+					{
+						streamToClient.close();
+						streamToClient = null;
+					}
+					catch (IOException e) {  System.err.println(e); }
+				}
+			
+				if (streamFromClient != null)
+				{
+					try
+					{
+						streamFromClient.close();
+						streamFromClient = null;
+					}
+					catch (IOException e) {  System.err.println(e); }
+				}
+			
+				if (streamFromServer != null)
+				{
+					try
+					{
+						streamFromServer.close();
+						streamFromServer = null;
+					}
+					catch (IOException e) {  System.err.println(e); }
+				}
+			
+				try {
+					if (server != null)
+					{
+						server.close();
+						server = null;
+					}
+					if (client != null)
+					{
+						client.close();
+						client = null;
+					}
+				} catch (IOException e) { System.err.println(e);   }   
+			
+			
+			
+			}    //Acabou while
+		
+		}//if
+		if (source == Botao)
+		{
+			Rodar = false;
+			return;
+		}
+}  //Acabou a implementação dos eventos
 	
 	public static void main (String args[]) throws IOException
-	{
-		SimpleProxy Proxy = new SimpleProxy(8011, 80);
+	{	
+		SimpleProxy Proxy = new SimpleProxy();
+		
+		Proxy.setTitle("Proxy");
+		Proxy.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		Proxy.add(Painel);
+		Proxy.pack();
+		Proxy.setVisible(true);
+		
 	}
 	
 	
