@@ -1,0 +1,74 @@
+import java.awt.TextField;
+import java.awt.event.*;
+import java.io.IOException;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+
+public class Janela extends JFrame implements ActionListener{
+	
+	int localport;
+	
+	JPanel Painel;
+	
+	JButton Botao;
+	
+	JTextField TextField;
+	
+	JLabel Legenda;
+	
+	SimpleProxy Proxy;
+	
+	public void actionPerformed (ActionEvent evt)
+	{
+		Object source = evt.getSource();
+		if (source == TextField)
+		{
+			System.out.println("EVENTO!");
+			localport = Integer.parseInt(TextField.getText()) ;
+			try
+			{
+				Proxy = new SimpleProxy(localport, 80);
+			} catch (IOException e)
+			{
+				System.out.println("ERRO no PROXY!");
+			}
+		}
+		if (source == Botao)
+		{
+			Proxy.Fechar_Programa();
+			return;
+		}
+	}
+	
+	public Janela ()
+	{
+		Painel = new JPanel ();
+		Botao = new JButton ("FECHAR!");
+		TextField = new JTextField(7);
+		Legenda = new JLabel("Digite a localport:");
+		Legenda.setLabelFor(TextField);
+		
+		TextField.addActionListener(this);
+		Botao.addActionListener(this);
+		
+		Painel.add(Botao);
+		Painel.add(TextField);
+		Painel.add(Legenda);
+		add(Painel);
+		
+		setTitle("Proxy");
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		pack();
+		setVisible(true);
+		
+	}
+	
+	public static void main (String args[])
+	{
+		Janela Proxy = new Janela(); 
+	}
+}
